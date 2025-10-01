@@ -158,8 +158,7 @@ public void moveD2() {moveD();moveD();};
 
 
 
-    // ---------- UTIL ----------
-        // ---------- UTIL ----------
+   
     public void printCube() {
     java.util.function.BiConsumer<Face, Integer> printRow = (face, row) -> {
         int idx = face.ordinal();
@@ -404,39 +403,62 @@ public static List<String> simplifyMoves(List<String> moves) {
     return result;
 }
 
-public String g1Mask() {
-    
-    int[] eoFacelets = {
-        // U
-        Face.U.ordinal()*9 + 2,
-        Face.U.ordinal()*9 + 4,
-        Face.U.ordinal()*9 + 6,
-        Face.U.ordinal()*9 + 8,
-        // D
-        Face.D.ordinal()*9 + 2,
-        Face.D.ordinal()*9 + 4,
-        Face.D.ordinal()*9 + 6,
-        Face.D.ordinal()*9 + 8,
-        // F
-        Face.F.ordinal()*9 + 4,
-        Face.F.ordinal()*9 + 6,
-        // B
-        Face.B.ordinal()*9 + 4,
-        Face.B.ordinal()*9 + 6
-    };
+public boolean edgesOriented() {
+    // UF edge = U7 + F1
+    if (labels[Face.U.ordinal()][7].charAt(0) != 'U' &&
+        labels[Face.F.ordinal()][1].charAt(0) != 'F') return false;
 
-    java.util.Set<Integer> eoSet = new java.util.HashSet<>();
-    for (int idx : eoFacelets) eoSet.add(idx);
+    // UR edge = U5 + R1
+    if (labels[Face.U.ordinal()][5].charAt(0) != 'U' &&
+        labels[Face.R.ordinal()][1].charAt(0) != 'R') return false;
 
-    StringBuilder sb = new StringBuilder();
-    for (int f = 0; f < 6; f++) {
-        for (int i = 0; i < 9; i++) {
-            int flatIdx = f * 9 + i;
-            sb.append(eoSet.contains(flatIdx) ? "o" : "X");
-        }
-    }
-    return sb.toString();
+    // UL edge = U3 + L1
+    if (labels[Face.U.ordinal()][3].charAt(0) != 'U' &&
+        labels[Face.L.ordinal()][1].charAt(0) != 'L') return false;
+
+    // UB edge = U1 + B1
+    if (labels[Face.U.ordinal()][1].charAt(0) != 'U' &&
+        labels[Face.B.ordinal()][1].charAt(0) != 'B') return false;
+
+    // DF edge = D1 + F7
+    if (labels[Face.D.ordinal()][1].charAt(0) != 'D' &&
+        labels[Face.F.ordinal()][7].charAt(0) != 'F') return false;
+
+    // DR edge = D5 + R7
+    if (labels[Face.D.ordinal()][5].charAt(0) != 'D' &&
+        labels[Face.R.ordinal()][7].charAt(0) != 'R') return false;
+
+    // DL edge = D3 + L7
+    if (labels[Face.D.ordinal()][3].charAt(0) != 'D' &&
+        labels[Face.L.ordinal()][7].charAt(0) != 'L') return false;
+
+    // DB edge = D7 + B7
+    if (labels[Face.D.ordinal()][7].charAt(0) != 'D' &&
+        labels[Face.B.ordinal()][7].charAt(0) != 'B') return false;
+
+    // FR edge = F5 + R3
+    if (labels[Face.F.ordinal()][5].charAt(0) != 'F' &&
+        labels[Face.R.ordinal()][3].charAt(0) != 'R') return false;
+
+    // FL edge = F3 + L5
+    if (labels[Face.F.ordinal()][3].charAt(0) != 'F' &&
+        labels[Face.L.ordinal()][5].charAt(0) != 'L') return false;
+
+    // BR edge = B3 + R5
+    if (labels[Face.B.ordinal()][3].charAt(0) != 'B' &&
+        labels[Face.R.ordinal()][5].charAt(0) != 'R') return false;
+
+    // BL edge = B5 + L3
+    if (labels[Face.B.ordinal()][5].charAt(0) != 'B' &&
+        labels[Face.L.ordinal()][3].charAt(0) != 'L') return false;
+
+    return true;
 }
+
+
+
+
+
 
 
 
@@ -447,35 +469,7 @@ public String g1Mask() {
     public static void main(String[] args) {
         //MyCube c = new MyCube();
         System.out.println("Initial:");
-        //c.printCube();
-
-        /*c.moveF();
-        c.printCube();
-         c.moveL();
-         c.printCube();
-          c.moveR();
-          c.printCube();
-           c.moveB();
-           c.printCube();
-            c.moveD();
-        c.printCube();
-
-        c.moveF(); // scramble
-        c.moveR();
-         c.moveB();
-         
-         c.moveL(); //has issue wrong rotations n stuff
-         c.moveD();
-         c.moveU();
-
-        String sol = MyCube.solveIDDFS(c, 10);
-        System.out.println("Solution (≤6 moves): " + sol);
-MyCube solved = new MyCube();
-        List<String> solvedStates = List.of(solved.toStateString());
-
-    Map<String, Integer> table = MyCube.genPruningTable(solvedStates, 5);
-    System.out.println("Generated pruning table entries: " + table.size());*/
-
+  
 
     MyCube solved = new MyCube();
 
