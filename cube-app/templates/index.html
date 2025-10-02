@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rubik's Cube - Three.js</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      button {
+        position: relative;
+        z-index: 10;
+        margin: 2px;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+          "jsm/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <!-- Control Buttons -->
+    <button id="Lcw">L ⟳</button>
+    <button id="Lccw">L ⟲</button>
+    <button id="Rcw">R ⟳</button>
+    <button id="Rccw">R ⟲</button>
+    <button id="Ucw">U ⟳</button>
+    <button id="Uccw">U ⟲</button>
+    <button id="Dcw">D ⟳</button>
+    <button id="Dccw">D ⟲</button>
+    <button id="Fcw">F ⟳</button>
+    <button id="Fccw">F ⟲</button>
+    <button id="Bcw">B ⟳</button>
+    <button id="Bccw">B ⟲</button>
+
+    <!-- Load your cube JS -->
+    <script type="module" src="{{ url_for('static', filename='realcube.js') }}"></script>
+  </body>
+</html>
