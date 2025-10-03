@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "jsm/controls/OrbitControls.js";
 
-// === COLOR MAPPING ===
+// color mapping
 const COLORS = {
   U: 0xffffff, // white
   R: 0xff0000, // red
@@ -11,10 +11,10 @@ const COLORS = {
   B: 0x0000ff, // blue
 };
 
-// === Your cube state string (54 characters) ===
-const cubeString = "BBURUDBFUFFFRRFUUFLULUFUDLRRDBBDBDBLUDDFLLRRBRLLLBRDDF";
+//
+//const cubeString = "BBURUDBFUFFFRRFUUFLULUFUDLRRDBBDBDBLUDDFLLRRBRLLLBRDDF";
 
-// === GLOBALS ===
+// global
 const w = window.innerWidth;
 const h = window.innerHeight;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -31,7 +31,7 @@ controls.enableDamping = true;
 const cubeArray = [];
 let indexCubeArray = 0;
 
-// === CREATE CUBE ===
+// create cube
 function createCube() {
   const geo = new THREE.BoxGeometry(0.95, 0.95, 0.95);
 
@@ -55,7 +55,7 @@ function createCube() {
   }
 }
 
-// === PARSE CUBE STRING INTO FACES ===
+//parse
 function parseCubeString(str) {
   const faces = ["U", "R", "F", "D", "L", "B"];
   let state = {};
@@ -67,7 +67,7 @@ function parseCubeString(str) {
   return state;
 }
 
-// === APPLY STATE TO CUBIES ===
+// apply state
 function applyStateToCube(state) {
   const getColor = (ch) => COLORS[ch];
 
@@ -119,7 +119,7 @@ function getFaceCubies(face) {
   });
 }
 
-function rotateFace(face, direction) {
+function rotateFace(face, direction, callback) {
   if (isRotating) return;
   isRotating = true;
 
@@ -152,6 +152,7 @@ function rotateFace(face, direction) {
       requestAnimationFrame(animateRotation);
     } else {
       isRotating = false;
+
       while (pivot.children.length > 0) {
         const child = pivot.children[0];
         child.applyMatrix4(pivot.matrixWorld);
@@ -159,35 +160,76 @@ function rotateFace(face, direction) {
         scene.add(child);
       }
       pivot.rotation.set(0,0,0);
+
+      if (callback) callback();   //  notify when finished
     }
   }
 
   animateRotation();
 }
+function performMove(move) {
+  return new Promise((resolve) => {
+    let face = move[0];
+    let dir = +1;
+    if (move.endsWith("'")) dir = -1;   // counterclockwise
+    rotateFace(face, dir, resolve);
+  });
+}
+let playing = false;
+
+async function playSolution(moves) {
+  if (playing) return;
+  playing = true;
+
+  for (let move of moves) {
+    await performMove(move);
+  }
+
+  playing = false;
+}
 
 // === BUTTON HANDLERS ===
-document.getElementById("Lcw").onclick  = () => rotateFace("L", +1);
-document.getElementById("Lccw").onclick = () => rotateFace("L", -1);
-document.getElementById("Rcw").onclick  = () => rotateFace("R", +1);
-document.getElementById("Rccw").onclick = () => rotateFace("R", -1);
-document.getElementById("Ucw").onclick  = () => rotateFace("U", +1);
-document.getElementById("Uccw").onclick = () => rotateFace("U", -1);
-document.getElementById("Dcw").onclick  = () => rotateFace("D", +1);
-document.getElementById("Dccw").onclick = () => rotateFace("D", -1);
-document.getElementById("Fcw").onclick  = () => rotateFace("F", +1);
-document.getElementById("Fccw").onclick = () => rotateFace("F", -1);
-document.getElementById("Bcw").onclick  = () => rotateFace("B", +1);
-document.getElementById("Bccw").onclick = () => rotateFace("B", -1);
+document.getElementById("Lcw").onclick  = () => performMove("L");
+document.getElementById("Lccw").onclick = () => performMove("L'");
+document.getElementById("Rcw").onclick  = () => performMove("R");
+document.getElementById("Rccw").onclick = () => performMove("R'");
+document.getElementById("Ucw").onclick  = () => performMove("U");
+document.getElementById("Uccw").onclick = () => performMove("U'");
+document.getElementById("Dcw").onclick  = () => performMove("D");
+document.getElementById("Dccw").onclick = () => performMove("D'");
+document.getElementById("Fcw").onclick  = () => performMove("F");
+document.getElementById("Fccw").onclick = () => performMove("F'");
+document.getElementById("Bcw").onclick  = () => performMove("B");
+document.getElementById("Bccw").onclick = () => performMove("B'");
 
-// === MAIN LOOP ===
+// main llop
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
   renderer.render(scene, camera);
 }
 
-// === START ===
+// start
 createCube();
-const state = parseCubeString(cubeString);
-applyStateToCube(state);
-animate();
+fetch("/cube-string")
+  .then(res => res.json())
+  .then(data => {
+    const state = parseCubeString(data.cubeString);
+    applyStateToCube(state);
+    animate();
+  });
+document.getElementById("solveBtn").onclick = () => {
+  fetch("/solve-cube")
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "ok") {
+        // Split solution string like "R U R' U'" into ["R","U","R'","U'"]
+        const moves = data.solution.trim().split(/\s+/);
+        console.log("Moves to play:", moves);
+        playSolution(moves);
+      } else {
+        console.error("Solver error:", data.message);
+      }
+    });
+}
+

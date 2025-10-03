@@ -8,11 +8,44 @@
       body {
         margin: 0;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
       }
-      button {
+
+      /* solve button */
+      #top-bar {
         position: relative;
         z-index: 10;
-        margin: 2px;
+        padding: 8px;
+        text-align: center;
+      }
+
+      #solveBtn {
+        padding: 8px 16px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+
+      /* 3D cube container */
+      #cube-container {
+        flex: 1;
+      }
+
+      /* Move buttons below cube */
+      #controls {
+        position: relative;
+        z-index: 10;
+        padding: 8px;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      #controls button {
+        margin: 3px;
+        padding: 6px 10px;
+        font-size: 14px;
+        cursor: pointer;
       }
     </style>
     <script type="importmap">
@@ -25,19 +58,57 @@
     </script>
   </head>
   <body>
-    <!-- Control Buttons -->
-    <button id="Lcw">L ⟳</button>
-    <button id="Lccw">L ⟲</button>
-    <button id="Rcw">R ⟳</button>
-    <button id="Rccw">R ⟲</button>
-    <button id="Ucw">U ⟳</button>
-    <button id="Uccw">U ⟲</button>
-    <button id="Dcw">D ⟳</button>
-    <button id="Dccw">D ⟲</button>
-    <button id="Fcw">F ⟳</button>
-    <button id="Fccw">F ⟲</button>
-    <button id="Bcw">B ⟳</button>
-    <button id="Bccw">B ⟲</button>
+    <!-- Top Solve Button -->
+    <button id="scanBtn">Scan Your Cube</button>
+    <button id="solveBtn">Solve Your Cube</button>
+  <div id="cubeDisplay"></div>
+
+  <script>
+    document.getElementById("scanBtn").addEventListener("click", () => {
+      fetch("/scan-cube")
+        .then(res => res.json())
+        .then(data => {
+          console.log(data.status);
+          if (data.status === "Camera opened") {
+            // Poll cube-string after some delay (give color.py time to write tiles.txt)
+            setTimeout(loadCubeString, 3000);
+          }
+        });
+    });
+
+    function loadCubeString() {
+      fetch("/cube-string")
+        .then(res => res.json())
+        .then(data => {
+          console.log("Cube String:", data.cubeString);
+
+          // TODO: update your 3js cube here
+          // e.g. call updateCube(data.cubeString)
+        });
+    }
+
+    
+    
+  </script>
+
+    <!-- 3D Cube Rendering Area -->
+    <div id="cube-container"></div>
+
+    <!-- Move Buttons Below -->
+    <div id="controls">
+      <button id="Lcw">L ⟳</button>
+      <button id="Lccw">L ⟲</button>
+      <button id="Rcw">R ⟳</button>
+      <button id="Rccw">R ⟲</button>
+      <button id="Ucw">U ⟳</button>
+      <button id="Uccw">U ⟲</button>
+      <button id="Dcw">D ⟳</button>
+      <button id="Dccw">D ⟲</button>
+      <button id="Fcw">F ⟳</button>
+      <button id="Fccw">F ⟲</button>
+      <button id="Bcw">B ⟳</button>
+      <button id="Bccw">B ⟲</button>
+    </div>
 
     <!-- Load your cube JS -->
     <script type="module" src="{{ url_for('static', filename='realcube.js') }}"></script>
