@@ -1,8 +1,9 @@
-from flask import Flask, render_template, jsonify, make_response
+from flask import Flask, render_template, jsonify, make_response, request
 import subprocess
 import os
 import sys
 import traceback
+import kociemba
 
 app = Flask(__name__)
 
@@ -44,7 +45,7 @@ def scan_cube():
 def solve_cube():
     try:
         script_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "SolverLogic", "solver.py")
+            os.path.join(os.path.dirname(__file__), "SolverLogic", "Solver.py")
         )
         print("DEBUG: Running with", sys.executable, script_path)
 
@@ -69,6 +70,47 @@ def solve_cube():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)})
+@app.route("/solve-state", methods=["POST"])
+def solve_state():
+    try:
+        data = request.get_json()
+        cube_str = data.get("cubeString", "").strip()
+
+        print("DEBUG: Received frontend cube string:")
+        print(cube_str)
+        print("Length:", len(cube_str))
+
+        if len(cube_str) != 54:
+            return jsonify({
+                "status": "error",
+                "message": f"Cube string must be 54 characters, got {len(cube_str)}"
+            })
+
+        counts = {face: cube_str.count(face) for face in "URFDLB"}
+        print("Counts:", counts)
+
+        for face in "URFDLB":
+            if counts[face] != 9:
+                return jsonify({
+                    "status": "error",
+                    "message": f"Invalid cube string: expected 9 {face} stickers, got {counts[face]}",
+                    "counts": counts
+                })
+
+        solution = kociemba.solve(cube_str)
+
+        return jsonify({
+            "status": "ok",
+            "solution": solution,
+            "cubeString": cube_str
+        })
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        })
 
 if __name__ == "__main__":
     app.run(debug=True)
