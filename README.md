@@ -28,6 +28,31 @@ The application allows users to scan a real Rubik’s Cube using their webcam, c
 - **Solver Logic:** Python, Java
 - **Cube Rendering:** Three.js, OrbitControls
 
+##How to run
+
+
+
+```bash
+git clone https://github.com/akshitpalamthody420/3Jscube-solver-roux.git
+cd 3Jscube-solver-roux
+2. Create a Virtual Environment
+python -m venv venv
+3. Activate the Virtual Environment
+macOS / Linux
+source venv/bin/activate
+Windows
+venv\Scripts\activate
+4. Install Requirements
+pip install -r requirements.txt
+5. Run the Flask App
+cd cube-app
+python app.py
+6. Open in Browser
+
+Go to:
+
+http://127.0.0.1:5000
+
 ## Project Structure
 
 ```text
