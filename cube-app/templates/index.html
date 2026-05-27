@@ -3,42 +3,147 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rubik's Cube - Three.js</title>
+    <title>Rubik's Cube Solver</title>
+
     <style>
       body {
         margin: 0;
         overflow: hidden;
+        height: 100vh;
+        font-family: Arial, sans-serif;
+        background: #111;
+      }
+
+      #top-bar {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 20;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
         display: flex;
-        flex-direction: column;
+        gap: 8px;
+      }
+
+      #top-bar button {
+        padding: 8px 14px;
+        font-size: 15px;
+        cursor: pointer;
+        border: 1px solid #333;
+        border-radius: 6px;
+        background: white;
+      }
+
+      #manualEntryPanel {
+        position: absolute;
+        top: 70px;
+        left: 15px;
+        width: 365px;
+        max-height: calc(100vh - 140px);
+        overflow-y: auto;
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.96);
+        border-radius: 12px;
+        z-index: 15;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+      }
+
+      #manualEntryPanel h2 {
+        margin: 0 0 8px;
+        font-size: 20px;
+      }
+
+      #manualEntryPanel p {
+        margin: 8px 0;
+        font-size: 14px;
+      }
+
+      #colourPalette {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 10px 0;
+      }
+
+      .colourBtn {
+        padding: 6px 9px;
+        border: 1px solid #333;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+
+      #manualCubeGrid {
+        display: grid;
+        grid-template-columns: repeat(4, 78px);
+        grid-template-rows: repeat(3, auto);
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .manualFace {
+        display: grid;
+        grid-template-columns: repeat(3, 22px);
+        grid-template-rows: 15px repeat(3, 22px);
+        gap: 2px;
+        padding: 4px;
+        border: 1px solid #333;
+        background: #ddd;
+        border-radius: 5px;
+      }
+
+      .manualFaceTitle {
+        grid-column: span 3;
+        font-size: 11px;
+        text-align: center;
+        font-weight: bold;
+      }
+
+      .manualSticker {
+        width: 22px;
+        height: 22px;
+        border: 1px solid #222;
+        cursor: pointer;
+        box-sizing: border-box;
+      }
+
+      .manualSpacer {
+        width: 78px;
+        height: 78px;
+      }
+
+      #saveManualCubeBtn,
+      #resetManualCubeBtn {
+        margin-top: 10px;
+        padding: 7px 10px;
+        cursor: pointer;
+        border: 1px solid #333;
+        border-radius: 6px;
+        background: white;
+      }
+
+      #manualCubeMessage {
+        font-weight: bold;
+        color: #222;
+      }
+
+      #cube-container {
+        width: 100vw;
         height: 100vh;
       }
 
-      /* solve button */
-      #top-bar {
-        position: relative;
-        z-index: 10;
-        padding: 8px;
-        text-align: center;
-      }
-
-      #solveBtn {
-        padding: 8px 16px;
-        font-size: 16px;
-        cursor: pointer;
-      }
-
-      /* 3D cube container */
-      #cube-container {
-        flex: 1;
-      }
-
-      /* Move buttons below cube */
       #controls {
-        position: relative;
-        z-index: 10;
-        padding: 8px;
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 20;
+        padding: 10px;
         text-align: center;
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
       }
 
       #controls button {
@@ -46,8 +151,12 @@
         padding: 6px 10px;
         font-size: 14px;
         cursor: pointer;
+        border: 1px solid #333;
+        border-radius: 6px;
+        background: white;
       }
     </style>
+
     <script type="importmap">
       {
         "imports": {
@@ -57,44 +166,39 @@
       }
     </script>
   </head>
+
   <body>
-    <!-- Top Solve Button -->
-    <button id="scanBtn">Scan Your Cube</button>
-    <button id="solveBtn">Solve Your Cube</button>
-  <div id="cubeDisplay"></div>
+    <div id="top-bar">
+      <button id="scanBtn">Scan Your Cube</button>
+      <button id="solveBtn">Solve Your Cube</button>
+    </div>
 
-  <script>
-    document.getElementById("scanBtn").addEventListener("click", () => {
-      fetch("/scan-cube")
-        .then(res => res.json())
-        .then(data => {
-          console.log(data.status);
-          if (data.status === "Camera opened") {
-            // Poll cube-string after some delay (give color.py time to write tiles.txt)
-            setTimeout(loadCubeString, 3000);
-          }
-        });
-    });
+    <div id="manualEntryPanel">
+      <h2>Manual Cube Entry</h2>
 
-    function loadCubeString() {
-      fetch("/cube-string")
-        .then(res => res.json())
-        .then(data => {
-          console.log("Cube String:", data.cubeString);
+      <p>Select a colour, then click stickers to fill the cube.</p>
 
-          // TODO: update your 3js cube here
-          // e.g. call updateCube(data.cubeString)
-        });
-    }
+      <div id="colourPalette">
+        <button class="colourBtn" data-colour="W" style="background:white;">White</button>
+        <button class="colourBtn" data-colour="R" style="background:red; color:white;">Red</button>
+        <button class="colourBtn" data-colour="G" style="background:green; color:white;">Green</button>
+        <button class="colourBtn" data-colour="Y" style="background:yellow;">Yellow</button>
+        <button class="colourBtn" data-colour="O" style="background:orange;">Orange</button>
+        <button class="colourBtn" data-colour="B" style="background:blue; color:white;">Blue</button>
+      </div>
 
-    
-    
-  </script>
+      <p>Selected colour: <strong id="selectedColourText">White</strong></p>
 
-    <!-- 3D Cube Rendering Area -->
+      <div id="manualCubeGrid"></div>
+
+      <button id="saveManualCubeBtn">Use Manual Cube</button>
+      <button id="resetManualCubeBtn">Reset Manual Cube</button>
+
+      <p id="manualCubeMessage"></p>
+    </div>
+
     <div id="cube-container"></div>
 
-    <!-- Move Buttons Below -->
     <div id="controls">
       <button id="Lcw">L ⟳</button>
       <button id="Lccw">L ⟲</button>
@@ -110,7 +214,6 @@
       <button id="Bccw">B ⟲</button>
     </div>
 
-    <!-- Load your cube JS -->
     <script type="module" src="{{ url_for('static', filename='realcube.js') }}"></script>
   </body>
 </html>

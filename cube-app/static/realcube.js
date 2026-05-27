@@ -1,7 +1,9 @@
 import * as THREE from "three";
 import { OrbitControls } from "jsm/controls/OrbitControls.js";
 
-// color mapping
+const SOLVED_CUBE_STRING =
+  "UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB";
+
 const COLORS = {
   U: 0xffffff, // white
   R: 0xff0000, // red
@@ -11,13 +13,18 @@ const COLORS = {
   B: 0x0000ff, // blue
 };
 
-// global
 const w = window.innerWidth;
 const h = window.innerHeight;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(w, h);
-document.body.appendChild(renderer.domElement);
+
+const cubeContainer = document.getElementById("cube-container");
+if (cubeContainer) {
+  cubeContainer.appendChild(renderer.domElement);
+} else {
+  document.body.appendChild(renderer.domElement);
+}
 
 const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 100);
 camera.position.z = 6;
@@ -34,7 +41,6 @@ let playing = false;
 let currentCubeString = "";
 let stickers = [];
 
-// Kociemba face order: U R F D L B
 const FACE_ORDER = ["U", "R", "F", "D", "L", "B"];
 
 const FACE_NORMALS = {
@@ -46,7 +52,6 @@ const FACE_NORMALS = {
   B: [0, 0, -1],
 };
 
-// Coordinate order used to build/read the 54-character Kociemba string
 const FACE_COORDS = {
   U: [
     [-1, 1, -1], [0, 1, -1], [1, 1, -1],
@@ -91,7 +96,6 @@ function sameVec(a, b) {
 
 function initStickerModel(cubeString) {
   stickers = [];
-
   let index = 0;
 
   for (const face of FACE_ORDER) {
@@ -101,7 +105,6 @@ function initStickerModel(cubeString) {
         pos: [...FACE_COORDS[face][i]],
         normal: [...FACE_NORMALS[face]],
       });
-
       index++;
     }
   }
@@ -116,8 +119,8 @@ function stickerModelToCubeString() {
     const normal = FACE_NORMALS[face];
 
     for (const coord of FACE_COORDS[face]) {
-      const sticker = stickers.find(s =>
-        sameVec(s.pos, coord) && sameVec(s.normal, normal)
+      const sticker = stickers.find(
+        (s) => sameVec(s.pos, coord) && sameVec(s.normal, normal)
       );
 
       if (!sticker) {
@@ -135,21 +138,15 @@ function rotateVector(vec, axis, dir) {
   const [x, y, z] = vec;
 
   if (axis === "x") {
-    return dir === 1
-      ? [x, -z, y]
-      : [x, z, -y];
+    return dir === 1 ? [x, -z, y] : [x, z, -y];
   }
 
   if (axis === "y") {
-    return dir === 1
-      ? [z, y, -x]
-      : [-z, y, x];
+    return dir === 1 ? [z, y, -x] : [-z, y, x];
   }
 
   if (axis === "z") {
-    return dir === 1
-      ? [-y, x, z]
-      : [y, -x, z];
+    return dir === 1 ? [-y, x, z] : [y, -x, z];
   }
 
   return vec;
@@ -174,7 +171,6 @@ function getMoveLayer(face) {
   }
 }
 
-// Direction mapping for Kociemba/Singmaster notation in this coordinate system
 function getMoveDirection(move) {
   const face = move[0];
   const isPrime = move.endsWith("'");
@@ -202,10 +198,9 @@ function applyLogicalSingleMove(move) {
   const axis = getMoveAxis(face);
   const layer = getMoveLayer(face);
   const dir = getMoveDirection(move);
-
   const axisIndex = { x: 0, y: 1, z: 2 }[axis];
 
-  stickers.forEach(sticker => {
+  stickers.forEach((sticker) => {
     if (sticker.pos[axisIndex] === layer) {
       sticker.pos = rotateVector(sticker.pos, axis, dir);
       sticker.normal = rotateVector(sticker.normal, axis, dir);
@@ -223,10 +218,13 @@ function applyLogicalMove(move) {
     applyLogicalSingleMove(move);
   }
 
+  currentCubeString = stickerModelToCubeString();
+
+  console.log("Move applied:", move);
   console.log("Current Kociemba cube string:", currentCubeString);
+  console.log("Is solved?", currentCubeString === SOLVED_CUBE_STRING);
 }
 
-// create cube
 function createCube() {
   const geo = new THREE.BoxGeometry(0.95, 0.95, 0.95);
 
@@ -234,12 +232,12 @@ function createCube() {
     for (let y = -1; y <= 1; y++) {
       for (let z = -1; z <= 1; z++) {
         const faceMaterials = [
-          new THREE.MeshBasicMaterial({ color: 0x000000 }), // Right
-          new THREE.MeshBasicMaterial({ color: 0x000000 }), // Left
-          new THREE.MeshBasicMaterial({ color: 0x000000 }), // Up
-          new THREE.MeshBasicMaterial({ color: 0x000000 }), // Down
-          new THREE.MeshBasicMaterial({ color: 0x000000 }), // Front
-          new THREE.MeshBasicMaterial({ color: 0x000000 })  // Back
+          new THREE.MeshBasicMaterial({ color: 0x000000 }),
+          new THREE.MeshBasicMaterial({ color: 0x000000 }),
+          new THREE.MeshBasicMaterial({ color: 0x000000 }),
+          new THREE.MeshBasicMaterial({ color: 0x000000 }),
+          new THREE.MeshBasicMaterial({ color: 0x000000 }),
+          new THREE.MeshBasicMaterial({ color: 0x000000 }),
         ];
 
         const cubie = new THREE.Mesh(geo, faceMaterials);
@@ -252,7 +250,6 @@ function createCube() {
   }
 }
 
-// parse cube string
 function parseCubeString(str) {
   const faces = ["U", "R", "F", "D", "L", "B"];
   const state = {};
@@ -266,44 +263,58 @@ function parseCubeString(str) {
   return state;
 }
 
-// apply state to visible cube
-function applyStateToCube(state) {
-  const getColor = (ch) => COLORS[ch];
+function getCubieAt(coord) {
+  return cubeArray.find((cubie) => {
+    const x = Math.round(cubie.position.x / 1.05);
+    const y = Math.round(cubie.position.y / 1.05);
+    const z = Math.round(cubie.position.z / 1.05);
 
-  cubeArray.forEach(cubie => {
-    if (cubie.position.x > 0.5) {
-      const sticker = state.R.shift();
-      cubie.material[0].color.setHex(getColor(sticker));
-    }
-
-    if (cubie.position.x < -0.5) {
-      const sticker = state.L.shift();
-      cubie.material[1].color.setHex(getColor(sticker));
-    }
-
-    if (cubie.position.y > 0.5) {
-      const sticker = state.U.shift();
-      cubie.material[2].color.setHex(getColor(sticker));
-    }
-
-    if (cubie.position.y < -0.5) {
-      const sticker = state.D.shift();
-      cubie.material[3].color.setHex(getColor(sticker));
-    }
-
-    if (cubie.position.z > 0.5) {
-      const sticker = state.F.shift();
-      cubie.material[4].color.setHex(getColor(sticker));
-    }
-
-    if (cubie.position.z < -0.5) {
-      const sticker = state.B.shift();
-      cubie.material[5].color.setHex(getColor(sticker));
-    }
+    return x === coord[0] && y === coord[1] && z === coord[2];
   });
 }
 
-// === ROTATION SYSTEM ===
+function getMaterialIndexForFace(face) {
+  switch (face) {
+    case "R": return 0; // right material
+    case "L": return 1; // left material
+    case "U": return 2; // up material
+    case "D": return 3; // down material
+    case "F": return 4; // front material
+    case "B": return 5; // back material
+    default: throw new Error(`Invalid face: ${face}`);
+  }
+}
+
+function applyStateToCube(state) {
+  const getColor = (ch) => COLORS[ch] ?? 0x808080;
+
+  // Reset all visible stickers to black first
+  cubeArray.forEach((cubie) => {
+    for (let i = 0; i < 6; i++) {
+      cubie.material[i].color.setHex(0x000000);
+    }
+  });
+
+  // Apply stickers using exact Kociemba coordinate mapping
+  for (const face of FACE_ORDER) {
+    const materialIndex = getMaterialIndexForFace(face);
+
+    for (let i = 0; i < 9; i++) {
+      const coord = FACE_COORDS[face][i];
+      const sticker = state[face][i];
+
+      const cubie = getCubieAt(coord);
+
+      if (!cubie) {
+        console.error(`No cubie found for ${face} sticker ${i} at`, coord);
+        continue;
+      }
+
+      cubie.material[materialIndex].color.setHex(getColor(sticker));
+    }
+  }
+}
+
 let isRotating = false;
 let targetRotation = 0;
 let currentRotation = 0;
@@ -311,7 +322,7 @@ const rotationSpeed = THREE.MathUtils.degToRad(2);
 let pivot = new THREE.Group();
 
 function getFaceCubies(face) {
-  return cubeArray.filter(cubie => {
+  return cubeArray.filter((cubie) => {
     switch (face) {
       case "R": return cubie.position.x > 0.5;
       case "L": return cubie.position.x < -0.5;
@@ -337,7 +348,7 @@ function rotateFace(face, direction, callback) {
   pivot = new THREE.Group();
   scene.add(pivot);
 
-  cubies.forEach(c => pivot.attach(c));
+  cubies.forEach((c) => pivot.attach(c));
   pivot.position.set(0, 0, 0);
 
   const axis = getMoveAxis(face);
@@ -371,9 +382,12 @@ function rotateFace(face, direction, callback) {
         child.position.y = Math.round(child.position.y / 1.05) * 1.05;
         child.position.z = Math.round(child.position.z / 1.05) * 1.05;
 
-        child.rotation.x = Math.round(child.rotation.x / (Math.PI / 2)) * (Math.PI / 2);
-        child.rotation.y = Math.round(child.rotation.y / (Math.PI / 2)) * (Math.PI / 2);
-        child.rotation.z = Math.round(child.rotation.z / (Math.PI / 2)) * (Math.PI / 2);
+        child.rotation.x =
+          Math.round(child.rotation.x / (Math.PI / 2)) * (Math.PI / 2);
+        child.rotation.y =
+          Math.round(child.rotation.y / (Math.PI / 2)) * (Math.PI / 2);
+        child.rotation.z =
+          Math.round(child.rotation.z / (Math.PI / 2)) * (Math.PI / 2);
       }
 
       scene.remove(pivot);
@@ -395,20 +409,33 @@ function performMove(move) {
   });
 }
 
+function expandMove(move) {
+  move = move.trim();
+
+  if (!move) return [];
+
+  if (move.endsWith("2")) {
+    const face = move[0];
+    return [face, face];
+  }
+
+  return [move];
+}
+
 async function playMoves(moves, updateLogicalState = true) {
   if (playing) return;
 
   playing = true;
 
   for (const rawMove of moves) {
-    const move = rawMove.trim();
+    const expandedMoves = expandMove(rawMove);
 
-    if (!move) continue;
+    for (const move of expandedMoves) {
+      await performMove(move);
 
-    await performMove(move);
-
-    if (updateLogicalState) {
-      applyLogicalMove(move);
+      if (updateLogicalState) {
+        applyLogicalMove(move);
+      }
     }
   }
 
@@ -419,26 +446,26 @@ async function playSolution(moves) {
   await playMoves(moves, true);
 }
 
-// === BUTTON HANDLERS ===
-document.getElementById("Lcw").onclick = () => playMoves(["L"], true);
-document.getElementById("Lccw").onclick = () => playMoves(["L'"], true);
+function bindMoveButtons() {
+  document.getElementById("Lcw").onclick = () => playMoves(["L"], true);
+  document.getElementById("Lccw").onclick = () => playMoves(["L'"], true);
 
-document.getElementById("Rcw").onclick = () => playMoves(["R"], true);
-document.getElementById("Rccw").onclick = () => playMoves(["R'"], true);
+  document.getElementById("Rcw").onclick = () => playMoves(["R"], true);
+  document.getElementById("Rccw").onclick = () => playMoves(["R'"], true);
 
-document.getElementById("Ucw").onclick = () => playMoves(["U"], true);
-document.getElementById("Uccw").onclick = () => playMoves(["U'"], true);
+  document.getElementById("Ucw").onclick = () => playMoves(["U"], true);
+  document.getElementById("Uccw").onclick = () => playMoves(["U'"], true);
 
-document.getElementById("Dcw").onclick = () => playMoves(["D"], true);
-document.getElementById("Dccw").onclick = () => playMoves(["D'"], true);
+  document.getElementById("Dcw").onclick = () => playMoves(["D"], true);
+  document.getElementById("Dccw").onclick = () => playMoves(["D'"], true);
 
-document.getElementById("Fcw").onclick = () => playMoves(["F"], true);
-document.getElementById("Fccw").onclick = () => playMoves(["F'"], true);
+  document.getElementById("Fcw").onclick = () => playMoves(["F"], true);
+  document.getElementById("Fccw").onclick = () => playMoves(["F'"], true);
 
-document.getElementById("Bcw").onclick = () => playMoves(["B"], true);
-document.getElementById("Bccw").onclick = () => playMoves(["B'"], true);
+  document.getElementById("Bcw").onclick = () => playMoves(["B"], true);
+  document.getElementById("Bccw").onclick = () => playMoves(["B'"], true);
+}
 
-// Optional: for a move input box with id="moveInput"
 window.applyMoveSequence = async function applyMoveSequence() {
   const input = document.getElementById("moveInput");
 
@@ -456,33 +483,27 @@ window.applyMoveSequence = async function applyMoveSequence() {
   await playMoves(moves, true);
 };
 
-// main loop
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
   renderer.render(scene, camera);
 }
 
-// start
-createCube();
+async function loadCubeFromBackend() {
+  const res = await fetch("/cube-string", { cache: "no-store" });
+  const data = await res.json();
 
-fetch("/cube-string", { cache: "no-store" })
-  .then(res => res.json())
-  .then(data => {
-    currentCubeString = data.cubeString;
+  currentCubeString = data.cubeString;
 
-    initStickerModel(currentCubeString);
+  initStickerModel(currentCubeString);
 
-    const state = parseCubeString(currentCubeString);
-    applyStateToCube(state);
+  const state = parseCubeString(currentCubeString);
+  applyStateToCube(state);
 
-    console.log("Initial cube string:", currentCubeString);
+  console.log("Loaded cube string:", currentCubeString);
+}
 
-    animate();
-  });
-
-// SOLVE BUTTON: sends current frontend cube state to Kociemba
-document.getElementById("solveBtn").onclick = async () => {
+async function solveCurrentCube() {
   if (playing) return;
 
   try {
@@ -490,6 +511,12 @@ document.getElementById("solveBtn").onclick = async () => {
 
     console.log("Sending cube string to Kociemba:");
     console.log(currentCubeString);
+    console.log("Is solved before solve?", currentCubeString === SOLVED_CUBE_STRING);
+
+    if (currentCubeString === SOLVED_CUBE_STRING) {
+      console.log("Cube is already solved. Not calling Kociemba.");
+      return;
+    }
 
     const response = await fetch("/solve-state", {
       method: "POST",
@@ -515,7 +542,7 @@ document.getElementById("solveBtn").onclick = async () => {
     console.log("Kociemba solution:", solutionText);
 
     if (!solutionText) {
-      console.log("Cube is already solved.");
+      console.log("Kociemba says cube is already solved.");
       return;
     }
 
@@ -525,11 +552,288 @@ document.getElementById("solveBtn").onclick = async () => {
 
     currentCubeString = stickerModelToCubeString();
 
-    console.log("Cube after solution:");
-    console.log(currentCubeString);
-
+    console.log("Cube after solution:", currentCubeString);
+    console.log("Solved after solution?", currentCubeString === SOLVED_CUBE_STRING);
   } catch (err) {
     console.error(err);
     alert("Error solving cube: " + err.message);
   }
+}
+
+async function scanCube() {
+  try {
+    const scanResponse = await fetch("/scan-cube", {
+      cache: "no-store",
+    });
+
+    const scanData = await scanResponse.json();
+    console.log("Scan response:", scanData);
+
+    alert(
+      "Camera scanner opened. Complete the scan in the camera window, then click OK here to load the scanned cube."
+    );
+
+    await loadCubeFromBackend();
+  } catch (err) {
+    console.error(err);
+    alert("Error scanning cube: " + err.message);
+  }
+}
+
+// ===============================
+// MANUAL CUBE ENTRY SYSTEM
+// ===============================
+
+const MANUAL_COLOUR_TO_FACE = {
+  W: "U",
+  R: "R",
+  G: "F",
+  Y: "D",
+  O: "L",
+  B: "B",
 };
+
+const MANUAL_DISPLAY_COLOURS = {
+  W: "white",
+  R: "red",
+  G: "green",
+  Y: "yellow",
+  O: "orange",
+  B: "blue",
+};
+
+const MANUAL_COLOUR_NAMES = {
+  W: "White",
+  R: "Red",
+  G: "Green",
+  Y: "Yellow",
+  O: "Orange",
+  B: "Blue",
+};
+
+let selectedManualColour = "W";
+
+const manualFaces = {
+  U: Array(9).fill("W"),
+  R: Array(9).fill("R"),
+  F: Array(9).fill("G"),
+  D: Array(9).fill("Y"),
+  L: Array(9).fill("O"),
+  B: Array(9).fill("B"),
+};
+
+function createManualFace(faceKey, title) {
+  const face = document.createElement("div");
+  face.className = "manualFace";
+  face.dataset.face = faceKey;
+
+  const titleEl = document.createElement("div");
+  titleEl.className = "manualFaceTitle";
+  titleEl.textContent = title;
+  face.appendChild(titleEl);
+
+  for (let i = 0; i < 9; i++) {
+    const sticker = document.createElement("div");
+    sticker.className = "manualSticker";
+    sticker.dataset.face = faceKey;
+    sticker.dataset.index = i;
+
+    sticker.style.background = MANUAL_DISPLAY_COLOURS[manualFaces[faceKey][i]];
+
+    if (i === 4) {
+      sticker.style.outline = "2px solid black";
+      sticker.title = "Centre sticker is fixed";
+    } else {
+      sticker.onclick = () => {
+        manualFaces[faceKey][i] = selectedManualColour;
+        sticker.style.background = MANUAL_DISPLAY_COLOURS[selectedManualColour];
+      };
+    }
+
+    face.appendChild(sticker);
+  }
+
+  return face;
+}
+
+function createSpacer() {
+  const spacer = document.createElement("div");
+  spacer.className = "manualSpacer";
+  return spacer;
+}
+
+function createManualCubeGrid() {
+  const grid = document.getElementById("manualCubeGrid");
+
+  if (!grid) return;
+
+  grid.innerHTML = "";
+
+  grid.appendChild(createSpacer());
+  grid.appendChild(createManualFace("U", "Up"));
+  grid.appendChild(createSpacer());
+  grid.appendChild(createSpacer());
+
+  grid.appendChild(createManualFace("L", "Left"));
+  grid.appendChild(createManualFace("F", "Front"));
+  grid.appendChild(createManualFace("R", "Right"));
+  grid.appendChild(createManualFace("B", "Back"));
+
+  grid.appendChild(createSpacer());
+  grid.appendChild(createManualFace("D", "Down"));
+  grid.appendChild(createSpacer());
+  grid.appendChild(createSpacer());
+}
+
+function manualColoursToKociembaString() {
+  const order = ["U", "R", "F", "D", "L", "B"];
+  let cubeString = "";
+
+  for (const face of order) {
+    for (const colour of manualFaces[face]) {
+      cubeString += MANUAL_COLOUR_TO_FACE[colour];
+    }
+  }
+
+  return cubeString;
+}
+
+function validateManualCube() {
+  const allColours = [];
+
+  for (const face of ["U", "R", "F", "D", "L", "B"]) {
+    allColours.push(...manualFaces[face]);
+  }
+
+  const counts = {
+    W: 0,
+    R: 0,
+    G: 0,
+    Y: 0,
+    O: 0,
+    B: 0,
+  };
+
+  for (const colour of allColours) {
+    counts[colour]++;
+  }
+
+  for (const colour of Object.keys(counts)) {
+    if (counts[colour] !== 9) {
+      return {
+        ok: false,
+        message: `Invalid cube: ${MANUAL_COLOUR_NAMES[colour]} appears ${counts[colour]} times instead of 9.`,
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    message: "Manual cube is valid.",
+  };
+}
+
+function resetManualCube() {
+  manualFaces.U = Array(9).fill("W");
+  manualFaces.R = Array(9).fill("R");
+  manualFaces.F = Array(9).fill("G");
+  manualFaces.D = Array(9).fill("Y");
+  manualFaces.L = Array(9).fill("O");
+  manualFaces.B = Array(9).fill("B");
+
+  createManualCubeGrid();
+
+  const msg = document.getElementById("manualCubeMessage");
+  if (msg) msg.textContent = "Manual cube reset.";
+}
+
+async function saveManualCube() {
+  const msg = document.getElementById("manualCubeMessage");
+  const validation = validateManualCube();
+
+  if (!validation.ok) {
+    if (msg) msg.textContent = validation.message;
+    alert(validation.message);
+    return;
+  }
+
+  const cubeString = manualColoursToKociembaString();
+
+  console.log("Manual Kociemba cube string:", cubeString);
+
+  const response = await fetch("/save-manual-cube", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    cache: "no-store",
+    body: JSON.stringify({
+      cubeString,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (data.status !== "ok") {
+    if (msg) msg.textContent = data.message;
+    alert(data.message);
+    return;
+  }
+
+  currentCubeString = cubeString;
+  initStickerModel(currentCubeString);
+
+  const state = parseCubeString(currentCubeString);
+  applyStateToCube(state);
+
+  if (msg) {
+    msg.textContent = "Manual cube saved. You can now press Solve Cube.";
+  }
+}
+
+function bindManualEntry() {
+  document.querySelectorAll(".colourBtn").forEach((button) => {
+    button.onclick = () => {
+      selectedManualColour = button.dataset.colour;
+
+      const selectedText = document.getElementById("selectedColourText");
+      if (selectedText) {
+        selectedText.textContent = MANUAL_COLOUR_NAMES[selectedManualColour];
+      }
+    };
+  });
+
+  const saveManualCubeBtn = document.getElementById("saveManualCubeBtn");
+  if (saveManualCubeBtn) {
+    saveManualCubeBtn.onclick = saveManualCube;
+  }
+
+  const resetManualCubeBtn = document.getElementById("resetManualCubeBtn");
+  if (resetManualCubeBtn) {
+    resetManualCubeBtn.onclick = resetManualCube;
+  }
+
+  createManualCubeGrid();
+}
+
+async function init() {
+  createCube();
+  bindMoveButtons();
+  bindManualEntry();
+
+  const solveBtn = document.getElementById("solveBtn");
+  if (solveBtn) {
+    solveBtn.onclick = solveCurrentCube;
+  }
+
+  const scanBtn = document.getElementById("scanBtn");
+  if (scanBtn) {
+    scanBtn.onclick = scanCube;
+  }
+
+  await loadCubeFromBackend();
+
+  animate();
+}
+
+init();
